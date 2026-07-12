@@ -1,0 +1,11 @@
+torch
+torchvision
+torchaudio
+transformers
+Pillow
+matplotlib
+pandas
+tqdm
+pdf2image
+python-docx
+docx2pdf
