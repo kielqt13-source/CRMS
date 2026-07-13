@@ -12,7 +12,7 @@
       <table class="table table-striped">
         <thead>
           <tr>
-            <th>Name</th>
+            <th>Name1</th>
             <th>Email</th>
             <th>Role</th>
             <th>Actions</th>
