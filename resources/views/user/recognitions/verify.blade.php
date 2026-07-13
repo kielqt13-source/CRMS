@@ -18,7 +18,7 @@
     </span>
     <div>
       <span class="fw-semibold">{{ $recognition->original_filename }}</span>
-      <span class="badge bg-label-primary ms-2">{{ $recognition->document_type }}</span>
+      <span class="badge bg-label-primary ms-2">{{ $recognition->documentType?->name }}</span>
     </div>
     @if($recognition->confidence)
       <span class="ms-auto badge bg-label-info">AI Confidence: {{ $recognition->confidence }}%</span>

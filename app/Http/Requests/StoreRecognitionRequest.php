@@ -14,8 +14,8 @@ class StoreRecognitionRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'file'          => ['required', 'file', 'mimes:jpeg,png,jpg,gif,svg,pdf,doc,docx', 'max:20480'],
-            'document_type' => ['required', 'in:Birth Certificate,Marriage Certificate,Death Certificate'],
+            'file'             => ['required', 'file', 'mimes:jpeg,png,jpg,gif,svg,pdf,doc,docx', 'max:20480'],
+            'document_type_id' => ['required', 'exists:document_types,id'],
         ];
     }
 }

@@ -36,8 +36,9 @@ Route::middleware('auth')->group(function () {
                 'rejected'   => $user->recognitions()->where('status', 'rejected')->count(),
             ];
             $byType = $user->recognitions()
-                ->selectRaw('document_type, count(*) as total')
-                ->groupBy('document_type')
+                ->join('document_types', 'recognitions.document_type_id', '=', 'document_types.id')
+                ->selectRaw('document_types.name as document_type, count(*) as total')
+                ->groupBy('document_types.id', 'document_types.name')
                 ->pluck('total', 'document_type');
             $recent = $user->recognitions()->latest()->take(8)->get();
             return view('user.dashboard', compact('stats', 'byType', 'recent'));

@@ -5,7 +5,10 @@ namespace App\Http\Controllers;
 use App\Http\Requests\StoreRecognitionRequest;
 use App\Jobs\ProcessRecognition;
 use App\Models\ActivityLog;
+use App\Models\Batch;
+use App\Models\DocumentType;
 use App\Models\Recognition;
+use App\Models\RecognitionField;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -18,13 +21,13 @@ class HandwrittenRecognitionController extends Controller
      */
     public function index(Request $request)
     {
-        $query = Auth::user()->recognitions()->latest();
+        $query = Auth::user()->recognitions()->with('documentType')->latest();
 
         if ($request->filled('status')) {
             $query->where('status', $request->status);
         }
-        if ($request->filled('document_type')) {
-            $query->where('document_type', $request->document_type);
+        if ($request->filled('document_type_id')) {
+            $query->where('document_type_id', $request->document_type_id);
         }
 
         $recognitions = $query->paginate(15)->withQueryString();
@@ -34,7 +37,9 @@ class HandwrittenRecognitionController extends Controller
             ->groupBy('status')
             ->pluck('total', 'status');
 
-        return view('user.recognitions.index', compact('recognitions', 'statusCounts'));
+        $documentTypes = DocumentType::where('is_active', true)->orderBy('sort_order')->get();
+
+        return view('user.recognitions.index', compact('recognitions', 'statusCounts', 'documentTypes'));
     }
 
     /**
@@ -42,7 +47,8 @@ class HandwrittenRecognitionController extends Controller
      */
     public function create()
     {
-        return view('user.recognitions.create');
+        $documentTypes = DocumentType::where('is_active', true)->orderBy('sort_order')->get();
+        return view('user.recognitions.create', compact('documentTypes'));
     }
 
     /**
@@ -50,24 +56,23 @@ class HandwrittenRecognitionController extends Controller
      */
     public function store(StoreRecognitionRequest $request)
     {
-        $file     = $request->file('file');
-        $filePath = $file->store('recognitions', 'public');
-        $origName = $file->getClientOriginalName();
-        $fileType = $this->fileType($origName);
-        $docType  = $request->input('document_type');
+        $file           = $request->file('file');
+        $filePath       = $file->store('recognitions', 'public');
+        $origName       = $file->getClientOriginalName();
+        $fileType       = $this->fileType($origName);
+        $documentTypeId = $request->input('document_type_id');
 
-        $recognition = DB::transaction(function () use ($filePath, $origName, $fileType, $docType) {
+        $recognition = DB::transaction(function () use ($filePath, $origName, $fileType, $documentTypeId) {
             $rec = Recognition::create([
-                'user_id'           => Auth::id(),
-                'file_path'         => $filePath,
-                'original_filename' => $origName,
-                'file_type'         => $fileType,
-                'status'            => 'pending',
-                'document_type'     => $docType,
+                'user_id'          => Auth::id(),
+                'file_path'        => $filePath,
+                'original_filename'=> $origName,
+                'file_type'        => $fileType,
+                'status'           => 'pending',
+                'document_type_id' => $documentTypeId,
             ]);
 
             ProcessRecognition::dispatch($rec);
-
             ActivityLog::log('upload', "Uploaded document: {$origName}", $rec);
 
             return $rec;
@@ -83,35 +88,43 @@ class HandwrittenRecognitionController extends Controller
     public function storeBatch(Request $request)
     {
         $request->validate([
-            'files'         => 'required|array|max:20',
-            'files.*'       => 'file|mimes:jpeg,png,jpg,gif,svg,pdf,doc,docx|max:20480',
-            'document_type' => 'required|in:Birth Certificate,Marriage Certificate,Death Certificate',
+            'files'            => 'required|array|max:20',
+            'files.*'          => 'file|mimes:jpeg,png,jpg,gif,svg,pdf,doc,docx|max:20480',
+            'document_type_id' => 'required|exists:document_types,id',
         ]);
 
-        $docType = $request->input('document_type');
-        $batchId = Str::uuid()->toString();
-        $count   = 0;
+        $documentTypeId = $request->input('document_type_id');
+        $count          = 0;
 
-        DB::transaction(function () use ($request, $docType, $batchId, &$count) {
+        DB::transaction(function () use ($request, $documentTypeId, &$count) {
+            // Create the batch record
+            $batch = Batch::create([
+                'user_id'          => Auth::id(),
+                'document_type_id' => $documentTypeId,
+                'batch_uuid'       => Str::uuid()->toString(),
+                'file_count'       => count($request->file('files')),
+            ]);
+
             foreach ($request->file('files') as $file) {
                 $filePath = $file->store('recognitions', 'public');
                 $origName = $file->getClientOriginalName();
                 $fileType = $this->fileType($origName);
 
                 $rec = Recognition::create([
-                    'user_id'           => Auth::id(),
-                    'file_path'         => $filePath,
-                    'original_filename' => $origName,
-                    'file_type'         => $fileType,
-                    'status'            => 'pending',
-                    'document_type'     => $docType,
-                    'batch_id'          => $batchId,
+                    'user_id'          => Auth::id(),
+                    'batch_id'         => $batch->id,
+                    'file_path'        => $filePath,
+                    'original_filename'=> $origName,
+                    'file_type'        => $fileType,
+                    'status'           => 'pending',
+                    'document_type_id' => $documentTypeId,
                 ]);
 
                 ProcessRecognition::dispatch($rec);
                 $count++;
             }
 
+            $docType = DocumentType::find($documentTypeId)?->name ?? 'Unknown';
             ActivityLog::log('batch_upload', "Batch uploaded {$count} {$docType} document(s).");
         });
 
@@ -125,7 +138,8 @@ class HandwrittenRecognitionController extends Controller
     public function show(Recognition $recognition)
     {
         $this->authorize('view', $recognition);
-        $fields = Recognition::getDocumentFields($recognition->document_type ?? '');
+        $recognition->load('documentType');
+        $fields = $recognition->getFieldMap();
 
         return view('user.recognitions.show', compact('recognition', 'fields'));
     }
@@ -136,9 +150,10 @@ class HandwrittenRecognitionController extends Controller
     public function verify(Recognition $recognition)
     {
         $this->authorize('view', $recognition);
+        $recognition->load('documentType', 'fields');
 
-        $fields     = Recognition::getDocumentFields($recognition->document_type ?? '');
-        $prefilled  = $recognition->corrected_fields ?? $recognition->extracted_fields ?? [];
+        $fields    = $recognition->getFieldMap();
+        $prefilled = $recognition->getEffectiveFields();
 
         return view('user.recognitions.verify', compact('recognition', 'fields', 'prefilled'));
     }
@@ -167,14 +182,23 @@ class HandwrittenRecognitionController extends Controller
                 ->with('status', 'Document has been rejected.');
         }
 
-        // Approve — save corrected fields
+        // Approve — upsert corrected fields into recognition_fields
         $corrected = $request->except(['_token', '_method', 'action', 'rejection_reason']);
-        $recognition->update([
-            'status'           => 'verified',
-            'corrected_fields' => $corrected,
-            'verified_by'      => Auth::id(),
-            'verified_at'      => now(),
-        ]);
+
+        DB::transaction(function () use ($recognition, $corrected) {
+            foreach ($corrected as $fieldKey => $value) {
+                RecognitionField::updateOrCreate(
+                    ['recognition_id' => $recognition->id, 'field_key' => $fieldKey],
+                    ['corrected_value' => $value, 'is_verified' => true]
+                );
+            }
+
+            $recognition->update([
+                'status'      => 'verified',
+                'verified_by' => Auth::id(),
+                'verified_at' => now(),
+            ]);
+        });
 
         ActivityLog::log('verify', "Verified recognition #{$recognition->id}", $recognition);
 

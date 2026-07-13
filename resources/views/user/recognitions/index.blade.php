@@ -61,7 +61,7 @@
                 <span class="badge bg-label-{{ $badge }} rounded-pill">{{ ucfirst($recognition->status) }}</span>
               </td>
               <td>
-                <span class="badge bg-label-secondary rounded-pill">{{ $recognition->document_type ?: 'N/A' }}</span>
+                <span class="badge bg-label-secondary rounded-pill">{{ $recognition->documentType?->name ?? 'N/A' }}</span>
               </td>
               <td>{{ $recognition->created_at->format('Y-m-d H:i') }}</td>
               <td>

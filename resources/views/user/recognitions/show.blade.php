@@ -29,7 +29,7 @@
               <h6 class="mb-0">{{ $recognition->original_filename }}</h6>
               <small class="text-muted">Uploaded {{ $recognition->created_at->format('Y-m-d H:i:s') }}</small>
               <div class="mt-1">
-                <span class="badge bg-label-secondary">{{ $recognition->document_type ?: 'N/A' }}</span>
+                <span class="badge bg-label-secondary">{{ $recognition->documentType?->name ?? 'N/A' }}</span>
               </div>
             </div>
           </div>
