@@ -19,8 +19,6 @@ Route::get('/dashboard', function () {
     }
     return redirect('/login');
 });
-
-
 Route::middleware('auth')->group(function () {
 
     Route::prefix('user')->group(function () {
