@@ -7,7 +7,6 @@
       <h4 class="mb-0">User Activity</h4>
     </div>
   </div>
-
   <div class="card">
     <div class="table-responsive">
       <table class="table table-striped">
