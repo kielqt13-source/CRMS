@@ -24,13 +24,13 @@
 
           <div class="mb-4">
             <label for="global_document_type" class="form-label fw-semibold">Step 1: Document Type</label>
-            <select id="global_document_type" class="form-select" required>
+            <select id="global_document_type" class="form-select @error('document_type_id') is-invalid @enderror" required>
               <option value="">Choose document type first</option>
-              <option value="Birth Certificate" {{ old('document_type') === 'Birth Certificate' ? 'selected' : '' }}>Birth Certificate</option>
-              <option value="Mirrage Certificate" {{ old('document_type') === 'Mirrage Certificate' ? 'selected' : '' }}>Mirrage Certificate</option>
-              <option value="Date Certificate" {{ old('document_type') === 'Date Certificate' ? 'selected' : '' }}>Date Certificate</option>
+              @foreach($documentTypes as $type)
+                <option value="{{ $type->id }}" {{ old('document_type_id') == $type->id ? 'selected' : '' }}>{{ $type->name }}</option>
+              @endforeach
             </select>
-            @error('document_type')
+            @error('document_type_id')
               <div class="text-danger small mt-1">{{ $message }}</div>
             @enderror
             <small class="text-muted">You must choose document type before selecting Single File or Batch Upload.</small>
@@ -61,7 +61,7 @@
 
               <form id="single-form" action="{{ route('recognitions.store') }}" method="POST" enctype="multipart/form-data">
                 @csrf
-                <input type="hidden" name="document_type" id="single_document_type" value="{{ old('document_type') }}">
+                <input type="hidden" name="document_type_id" id="single_document_type_id" value="{{ old('document_type_id') }}">
 
                 <div class="mb-4">
                   <label for="file" class="form-label fw-semibold">File</label>
@@ -108,7 +108,7 @@
 
               <form id="batch-form" action="{{ route('recognitions.store.batch') }}" method="POST" enctype="multipart/form-data">
                 @csrf
-                <input type="hidden" name="document_type" id="batch_document_type" value="{{ old('document_type') }}">
+                <input type="hidden" name="document_type_id" id="batch_document_type_id" value="{{ old('document_type_id') }}">
 
                 <div class="mb-4">
                   <label for="files" class="form-label fw-semibold">Files</label>
@@ -167,8 +167,8 @@
 
   <script>
     const globalDocumentType = document.getElementById('global_document_type');
-    const singleDocumentType = document.getElementById('single_document_type');
-    const batchDocumentType = document.getElementById('batch_document_type');
+    const singleDocumentTypeId = document.getElementById('single_document_type_id');
+    const batchDocumentTypeId = document.getElementById('batch_document_type_id');
     const singleTab = document.getElementById('single-tab');
     const batchTab = document.getElementById('batch-tab');
     const singleSubmit = document.getElementById('single-submit');
@@ -176,12 +176,10 @@
 
     function syncDocumentTypeState() {
       const value = globalDocumentType.value;
-      singleDocumentType.value = value;
-      batchDocumentType.value = value;
+      singleDocumentTypeId.value = value;
+      batchDocumentTypeId.value = value;
 
       const enabled = value !== '';
-      singleTab.disabled = !enabled;
-      batchTab.disabled = !enabled;
       singleSubmit.disabled = !enabled;
       batchSubmit.disabled = !enabled;
     }
