@@ -36,20 +36,20 @@
         </a>
         <ul class="dropdown-menu dropdown-menu-end">
           <li>
-            <a class="dropdown-item" href="{{ route('profile.edit') }}">
+            <div class="dropdown-header text-dark text-transform-none py-2 px-3" onclick="event.stopPropagation();">
               <div class="d-flex align-items-center">
                 <div class="flex-shrink-0 me-3">
                   <div class="rounded-circle bg-primary d-flex align-items-center justify-content-center"
-                       style="width:38px;height:38px;">
+                      style="width:38px;height:38px;">
                     <span class="text-white fw-bold">{{ strtoupper(substr(Auth::user()->name, 0, 1)) }}</span>
                   </div>
                 </div>
                 <div class="flex-grow-1">
-                  <span class="fw-semibold d-block">{{ Auth::user()->name }}</span>
+                  <span class="fw-semibold d-block text-dark">{{ Auth::user()->name }}</span>
                   <small class="text-muted">{{ Auth::user()->email }}</small>
                 </div>
               </div>
-            </a>
+            </div>
           </li>
           <li><div class="dropdown-divider"></div></li>
           <li>
