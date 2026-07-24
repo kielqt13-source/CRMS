@@ -42,9 +42,7 @@ git clone https://github.com/yourusername/your-repository.git
 ```bash
 composer install
 cp .env.example .env
-php artisan key:generate
 php artisan migrate
-php artisan storage:link
 php artisan serve
 ```
 
