@@ -48,7 +48,7 @@ php artisan storage:link
 php artisan serve
 ```
 
-### FastAPI (not yet final)
+### FastAPI (not yet applied)
 ```bash
 python -m venv venv
 pip install -r requirements.txt
